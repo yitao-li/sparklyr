@@ -9,8 +9,6 @@ import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.channel.ChannelHandler.Sharable
 
 class StreamHandler(serializer: Serializer, tracker: JVMObjectTracker) {
-  val invoke = new Invoke()
-
   def classExists(name: String): Boolean = {
     scala.util.Try(Class.forName(name)).isSuccess
   }
@@ -122,7 +120,7 @@ class StreamHandler(serializer: Serializer, tracker: JVMObjectTracker) {
           res = obj
           (0 until args.length).map { i =>
             val arr = args(i).asInstanceOf[Array[Object]]
-            res = invoke.invoke(
+            res = Invoke.invoke(
               cls,
               objId,
               /*obj=*/res,
@@ -133,7 +131,7 @@ class StreamHandler(serializer: Serializer, tracker: JVMObjectTracker) {
             if (i + 1 != args.length) cls = res.getClass
           }
         } else {
-          res = invoke.invoke(cls, objId, obj, methodName, args, logger)
+          res = Invoke.invoke(cls, objId, obj, methodName, args, logger)
         }
         Serializer.writeInt(dos, 0)
         serializer.writeObject(dos, res.asInstanceOf[AnyRef])
