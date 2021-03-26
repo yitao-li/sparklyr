@@ -21,7 +21,7 @@ object WorkerHelper {
     connectionTimeout: Int,
     context: Array[Byte],
     options: Map[_, _]
-  ): RDD[Row] = {
+  ): RDD[InternalRow] = {
 
     var customEnvMap = scala.collection.mutable.Map[String, String]();
     customEnv.foreach(kv => customEnvMap.put(
@@ -38,7 +38,7 @@ object WorkerHelper {
     val customEnvImmMap = (Map() ++ customEnvMap).toMap
     val optionsImmMap = (Map() ++ optionsMap).toMap
 
-    val computed: RDD[Row] = new WorkerRDD(
+    val computed: RDD[InternalRow] = new WorkerRDD(
       rdd,
       closure,
       columns,

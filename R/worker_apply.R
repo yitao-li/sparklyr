@@ -413,15 +413,16 @@ spark_worker_apply <- function(sc, config) {
 
     result <- spark_worker_apply_maybe_schema(config, result)
 
+    # TODO: instead of rbind, convert results to internal RDDs and bind
+    # internal RDDs instead
     all_results <- rbind(all_results, result)
   }
 
   if (!is.null(all_results) && nrow(all_results) > 0) {
     worker_log("updating ", nrow(all_results), " rows")
 
-    all_data <- lapply(seq_len(nrow(all_results)), function(i) as.list(all_results[i, ]))
-
-    worker_invoke(context, "setResultArraySeq", all_data)
+    rows <- to_unsafe_rows(sc, all_results, is_worker = TRUE)
+    worker_invoke(context, "setResult", rows)
     worker_log("updated ", nrow(all_results), " rows")
   } else {
     worker_log("found no rows in closure result")

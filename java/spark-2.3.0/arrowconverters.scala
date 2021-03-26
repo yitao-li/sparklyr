@@ -221,17 +221,14 @@ class ArrowConvertersImpl {
 object ArrowConverters {
   def fromPayloadArray(
     records: Array[Array[Byte]],
-    schema: StructType): Iterator[Row] = {
+    schema: StructType): Iterator[InternalRow] = {
 
     val context = TaskContext.get()
     val singleRecords: Iterator[Array[Byte]] = records.map(record => {record}).iterator
 
     val iter: ArrowRowIterator = (new ArrowConvertersImpl()).fromPayloadIterator(singleRecords, Option.empty)
 
-    iter.map({
-      val converter = CatalystTypeConverters.createToScalaConverter(schema)
-      converter(_).asInstanceOf[Row]
-    })
+    iter
   }
 
   def toArrowDataset(

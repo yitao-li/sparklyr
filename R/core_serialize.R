@@ -204,3 +204,50 @@ writeArgs <- function(con, args) {
     }
   }
 }
+
+# Export content of an R dataframe to Spark `UnsafeRow`s
+to_unsafe_rows <- function(sc, df, is_worker = FALSE) {
+  timestamp_col_idxes <- Filter(
+    function(i) inherits(df[[i + 1L]], "POSIXt"), seq(ncol(df)) - 1L
+  )
+  string_col_idxes <- Filter(
+    function(i) inherits(df[[i + 1L]], c("character", "factor")), seq(ncol(df)) - 1L
+  )
+  cols <- lapply(df, function(x) {
+    as.list(
+      if (inherits(x, "Date")) {
+        as.integer(x)
+      } else if (inherits(x, "POSIXt")) {
+        as.numeric(x)
+      } else if (inherits(x, "factor")) {
+        as.character(x)
+      } else {
+        x
+      }
+    )
+  })
+
+  invoke_static_impl <- (
+    if (is_worker) {
+      worker_invoke_static
+    } else {
+      invoke_static
+    }
+  )
+  rows <- invoke_static_impl(
+    sc,
+    "sparklyr.Utils",
+    "toUnsafeRows",
+    nrow(df),
+    lapply(
+      unname(cols),
+      function(x) {
+        serialize(x, connection = NULL, version = 2L, xdr = TRUE)
+      }
+    ),
+    as.list(timestamp_col_idxes),
+    as.list(string_col_idxes)
+  )
+
+  rows
+}

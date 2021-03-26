@@ -1188,6 +1188,53 @@ writeArgs <- function(con, args) {
     }
   }
 }
+
+# Export content of an R dataframe to Spark `UnsafeRow`s
+to_unsafe_rows <- function(sc, df, is_worker = FALSE) {
+  timestamp_col_idxes <- Filter(
+    function(i) inherits(df[[i + 1L]], "POSIXt"), seq(ncol(df)) - 1L
+  )
+  string_col_idxes <- Filter(
+    function(i) inherits(df[[i + 1L]], c("character", "factor")), seq(ncol(df)) - 1L
+  )
+  cols <- lapply(df, function(x) {
+    as.list(
+      if (inherits(x, "Date")) {
+        as.integer(x)
+      } else if (inherits(x, "POSIXt")) {
+        as.numeric(x)
+      } else if (inherits(x, "factor")) {
+        as.character(x)
+      } else {
+        x
+      }
+    )
+  })
+
+  invoke_static_impl <- (
+    if (is_worker) {
+      worker_invoke_static
+    } else {
+      invoke_static
+    }
+  )
+  rows <- invoke_static_impl(
+    sc,
+    "sparklyr.Utils",
+    "toUnsafeRows",
+    nrow(df),
+    lapply(
+      unname(cols),
+      function(x) {
+        serialize(x, connection = NULL, version = 2L, xdr = TRUE)
+      }
+    ),
+    as.list(timestamp_col_idxes),
+    as.list(string_col_idxes)
+  )
+
+  rows
+}
 core_get_package_function <- function(packageName, functionName) {
   if (packageName %in% rownames(installed.packages()) &&
     exists(functionName, envir = asNamespace(packageName))) {
@@ -1641,15 +1688,16 @@ spark_worker_apply <- function(sc, config) {
 
     result <- spark_worker_apply_maybe_schema(config, result)
 
+    # TODO: instead of rbind, convert results to internal RDDs and bind
+    # internal RDDs instead
     all_results <- rbind(all_results, result)
   }
 
   if (!is.null(all_results) && nrow(all_results) > 0) {
     worker_log("updating ", nrow(all_results), " rows")
 
-    all_data <- lapply(seq_len(nrow(all_results)), function(i) as.list(all_results[i, ]))
-
-    worker_invoke(context, "setResultArraySeq", all_data)
+    rows <- to_unsafe_rows(sc, all_results, is_worker = TRUE)
+    worker_invoke(context, "setResult", rows)
     worker_log("updated ", nrow(all_results), " rows")
   } else {
     worker_log("found no rows in closure result")

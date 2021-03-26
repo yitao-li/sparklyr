@@ -3,41 +3,11 @@
 #' @include utils.R
 
 spark_serialize_rds <- function(sc, df, columns, repartition) {
-  num_rows <- nrow(df)
-  timestamp_col_idxes <- Filter(
-    function(i) inherits(df[[i + 1L]], "POSIXt"), seq(ncol(df)) - 1L
-  )
-  string_col_idxes <- Filter(
-    function(i) inherits(df[[i + 1L]], c("character", "factor")), seq(ncol(df)) - 1L
-  )
-  cols <- lapply(df, function(x) {
-    as.list(
-      if (inherits(x, "Date")) {
-        as.integer(x)
-      } else if (inherits(x, "POSIXt")) {
-        as.numeric(x)
-      } else if (inherits(x, "factor")) {
-        as.character(x)
-      } else {
-        x
-      }
-    )
-  })
-  rdd <- invoke_static(
-    sc,
-    "sparklyr.Utils",
-    "parallelize",
+  rows <- to_unsafe_rows(sc, df)
+  rdd <- invoke(
     spark_context(sc),
-    num_rows,
-    cols %>%
-      unname() %>%
-      lapply(
-        function(x) {
-          serialize(x, connection = NULL, version = 2L, xdr = TRUE)
-        }
-      ),
-    as.list(timestamp_col_idxes),
-    as.list(string_col_idxes),
+    "parallelize",
+    rows,
     if (repartition > 0) as.integer(repartition) else 1L
   )
   schema <- spark_data_build_types(sc, columns)

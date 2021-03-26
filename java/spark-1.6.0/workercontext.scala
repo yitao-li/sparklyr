@@ -3,6 +3,7 @@ package sparklyr
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.types.StructType
 import scala.collection.JavaConversions._
 
@@ -21,7 +22,7 @@ class WorkerContext(
   barrier: Map[String, Any],
   partitionIndex: Int) {
 
-  private var result: Array[Row] = Array[Row]()
+  private var result: Array[InternalRow] = Array[InternalRow]()
   private var sourceArray: Option[Array[Row]] = None
 
   def getClosure(): Array[Byte] = {
@@ -64,15 +65,15 @@ class WorkerContext(
     getSourceArray.map(x => x.toSeq.map(g => g.asInstanceOf[Seq[Any]].toArray).toArray)
   }
 
-  def setResultArraySeq(resultParam: Array[Any]) = {
-    result = resultParam.map(x => Row.fromSeq(x.asInstanceOf[Array[_]].toSeq))
+  def setResult(resultParam: Array[Any]) = {
+    result = resultParam.asInstanceOf[Array[UnsafeRow]]
   }
 
-  def setResultIter(resultParam: Iterator[Row]) = {
+  def setResultIter(resultParam: Iterator[InternalRow]) = {
     result = resultParam.toArray
   }
 
-  def getResultArray(): Array[Row] = {
+  def getResultArray(): Array[InternalRow] = {
     result
   }
 

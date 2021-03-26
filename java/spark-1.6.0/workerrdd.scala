@@ -3,6 +3,7 @@ package sparklyr
 import org.apache.spark._
 import org.apache.spark.rdd._
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.types.StructType
 
 class WorkerRDD(
@@ -18,11 +19,11 @@ class WorkerRDD(
   connectionTimeout: Int,
   context: Array[Byte],
   options: Map[String, String]
-  ) extends RDD[Row](prev) {
+  ) extends RDD[InternalRow](prev) {
 
   override def getPartitions = firstParent.partitions
 
-  override def compute(split: Partition, task: TaskContext): Iterator[Row] = {
+  override def compute(split: Partition, task: TaskContext): Iterator[InternalRow] = {
 
     val workerApply: WorkerApply = new WorkerApply(
       closure: Array[Byte],

@@ -3,6 +3,8 @@ package sparklyr
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.expressions.UnsafeRow
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.types.StructType
 import scala.collection.JavaConversions._
 import org.apache.spark.sql.Row
@@ -22,7 +24,7 @@ class WorkerContext(
   barrier: Map[String, Any],
   partitionIndex: Int) {
 
-  private var result: Array[Row] = Array[Row]()
+  private var result: Array[UnsafeRow] = Array[UnsafeRow]()
   private var sourceArray: Option[Array[Row]] = None
 
   def getClosure(): Array[Byte] = {
@@ -65,15 +67,15 @@ class WorkerContext(
     getSourceArray.map(x => x.toSeq.map(g => g.asInstanceOf[Seq[Any]].toArray).toArray)
   }
 
-  def setResultArraySeq(resultParam: Array[Any]) = {
-    result = resultParam.map(x => Row.fromSeq(x.asInstanceOf[Array[_]].toSeq))
+  def setResult(resultParam: Array[UnsafeRow]) = {
+    result = resultParam
   }
 
-  def setResultIter(resultParam: Iterator[Row]) = {
+  def setResultIter(resultParam: Iterator[UnsafeRow]) = {
     result = resultParam.toArray
   }
 
-  def getResultArray(): Array[Row] = {
+  def getResultArray(): Array[UnsafeRow] = {
     result
   }
 

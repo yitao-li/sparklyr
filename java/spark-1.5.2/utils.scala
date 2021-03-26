@@ -253,17 +253,16 @@ object Utils {
     }
   }
 
-  def parallelize(
-    sc: SparkContext,
+  def toUnsafeRows(
     num_rows: Int,
     serialized_cols: Array[Array[Byte]],
     timestamp_col_idxes: Seq[Int],
-    string_col_idxes: Seq[Int],
-    partitions: Int
-  ): RDD[InternalRow] = {
+    string_col_idxes: Seq[Int]
+  ): Array[UnsafeRow] = {
     if (serialized_cols.isEmpty) {
       throw new IllegalArgumentException("Serialized columns byte array is empty.")
     }
+
     val cols = serialized_cols.map(
       serialized_col => {
         val bis = new ByteArrayInputStream(serialized_col)
@@ -329,9 +328,11 @@ object Utils {
       row
     }).toArray
 
-    val x: RDD[InternalRow] = sc.parallelize(rows, partitions)
+    rows
+  }
 
-    x
+  def toUnsafeRowBytes(rows: Array[UnsafeRow]): Array[Array[Byte]] = {
+    rows.map(row => row.getBytes).toArray
   }
 
   private[this] def writeVariableLengthField(

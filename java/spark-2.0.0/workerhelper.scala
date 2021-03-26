@@ -3,6 +3,7 @@ package sparklyr
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
 import org.apache.spark.TaskContext
@@ -23,7 +24,7 @@ object WorkerHelper {
     connectionTimeout: Int,
     context: Array[Byte],
     options: Map[_, _]
-  ): RDD[Row] = {
+  ): RDD[InternalRow] = {
 
     var customEnvMap = scala.collection.mutable.Map[String, String]();
     customEnv.foreach(kv => customEnvMap.put(
@@ -40,7 +41,7 @@ object WorkerHelper {
     val customEnvImmMap = (Map() ++ customEnvMap).toMap
     val optionsImmMap = (Map() ++ optionsMap).toMap
 
-    val computed: RDD[Row] = new WorkerRDD(
+    val computed: RDD[InternalRow] = new WorkerRDD(
       rdd,
       closure,
       columns,
@@ -90,29 +91,32 @@ object WorkerHelper {
     val customEnvImmMap = (Map() ++ customEnvMap).toMap
     val optionsImmMap = (Map() ++ optionsMap).toMap
 
-    val encoder = RowEncoder(schema)
+    val encoder = RowEncoder(schema).resolveAndBind()
+    val deserializer = encoder.createDeserializer
     var sourceSchema = sdf.schema
 
-    sdf.mapPartitions(rows => {
-      val workerApply: WorkerApply = new WorkerApply(
-        closure,
-        columns,
-        config,
-        port,
-        groupBy,
-        closureRLang,
-        bundlePath,
-        customEnvImmMap,
-        connectionTimeout,
-        context,
-        optionsImmMap,
-        timeZoneId,
-        sourceSchema,
-        () => Map(),
-        () => { TaskContext.getPartitionId() }
-      )
+    sdf.mapPartitions(
+      rows => {
+        val workerApply: WorkerApply = new WorkerApply(
+          closure,
+          columns,
+          config,
+          port,
+          groupBy,
+          closureRLang,
+          bundlePath,
+          customEnvImmMap,
+          connectionTimeout,
+          context,
+          optionsImmMap,
+          timeZoneId,
+          sourceSchema,
+          () => Map(),
+          () => { TaskContext.getPartitionId() }
+        )
 
-      workerApply.apply(rows)
-    })(encoder)
+        workerApply.apply(rows).map(deserializer.apply)
+      }
+    )(encoder)
   }
 }

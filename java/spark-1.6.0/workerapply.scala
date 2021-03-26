@@ -3,6 +3,7 @@ package sparklyr
 import java.io.{File, FileWriter}
 
 import org.apache.spark._
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.StructType
 
@@ -41,14 +42,14 @@ class WorkerApply(
     tempFile.getAbsolutePath()
   }
 
-  def apply(iterator: Iterator[Row]): Iterator[Row] = {
+  def apply(iterator: Iterator[Row]): Iterator[InternalRow] = {
 
     val sessionId: Int = Random.nextInt(10000)
     val logger = new Logger("Worker", sessionId)
     val lock: AnyRef = new Object()
 
     // No point in starting up R process to not process anything
-    if (!iterator.hasNext) return Array[Row]().iterator
+    if (!iterator.hasNext) return Array[InternalRow]().iterator
 
     val workerContext = new WorkerContext(
       iterator,
@@ -157,7 +158,7 @@ class WorkerApply(
       throw exception.get
     }
 
-    logger.log("is returning RDD iterator with " + workerContext.getResultArray().length + " rows")
-    return workerContext.getResultArray().iterator
+    logger.log("is returning RDD iterator with " + workerContext.getResultArray.length + " rows")
+    return workerContext.getResultArray.iterator
   }
 }
