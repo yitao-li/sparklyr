@@ -1444,7 +1444,8 @@ spark_write.tbl_spark <- function(x,
     context = list(writer = writer, paths = as.list(paths)),
     packages = packages,
     fetch_result_as_sdf = FALSE,
-    partition_index_param = "partition_index"
+    partition_index_param = "partition_index",
+    memory = TRUE
   )
 }
 
