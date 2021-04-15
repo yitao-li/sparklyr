@@ -26,6 +26,8 @@ i.i.d. samples from a Poisson distribution.
 }
 \seealso{
 Other Spark statistical routines: 
+\code{\link{sdf_rbeta}()},
+\code{\link{sdf_rbinom}()},
 \code{\link{sdf_rexp}()},
 \code{\link{sdf_rgamma}()},
 \code{\link{sdf_rlnorm}()},

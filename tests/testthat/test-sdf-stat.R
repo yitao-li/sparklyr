@@ -90,6 +90,8 @@ test_that("Can generate i.i.d samples from distributions correctly", {
   seed <- 142857L
   probs <- seq(.1, .9, 0.1)
   test_cases <- list(
+    list(fn = "rbeta", args = list(shape1 = 2.1, shape2 = 4.9)),
+    list(fn = "rbinom", args = list(size = 1000, prob = 0.25)),
     list(fn = "rexp", args = list(rate = 2.5)),
     list(fn = "rgamma", args = list(shape = 1.5, rate = 0.8)),
     list(fn = "rlnorm", args = list(meanlog = 0.1, sdlog = 1.1)),
