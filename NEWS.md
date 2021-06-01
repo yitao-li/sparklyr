@@ -1,3 +1,13 @@
+# Sparklyr 1.6.3
+
+### Data
+
+- Fixed a problem where `sdf_schema()` was making too many `invoke()` calls
+
+- Optimize `invoke()`
+
+- Implement memoization for `spark_dataframe.tbl_spark()` and `sdf_schema.tbl_spark()`
+
 # Sparklyr 1.6.2
 
 ### Data
